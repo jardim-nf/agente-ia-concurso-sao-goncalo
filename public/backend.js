@@ -1,4 +1,4 @@
-// Guarda o progresso no próprio navegador (localStorage) e liga o Professor IA à rota /api/claude.
+// Guarda o progresso no próprio navegador (localStorage) e liga o Professor IA à rota /api/ia.
 // Expõe window.AppBackend.use("db" | "sample"), no mesmo formato que o painel já usava no claude.ai.
 (function () {
   const STORE = "gmsg:docs";
@@ -116,7 +116,7 @@
     const messages = typeof input === "string" ? [{ role: "user", content: input }] : input;
     let res;
     try {
-      res = await fetch("/api/claude", {
+      res = await fetch("/api/ia", {
         method: "POST",
         headers: { "content-type": "application/json", "x-app-password": savedPassword() },
         body: JSON.stringify({ messages, tier: opts.modelTier || "default" }),

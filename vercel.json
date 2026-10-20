@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "outputDirectory": "public",
   "functions": {
-    "api/claude.js": { "maxDuration": 300 }
+    "api/ia.js": { "maxDuration": 300 }
   },
   "headers": [
     {

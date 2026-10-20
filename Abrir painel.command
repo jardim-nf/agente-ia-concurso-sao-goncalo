@@ -15,14 +15,18 @@ fi
 
 if [ ! -f .env ]; then
   echo
-  echo "Para ligar o Professor IA, cole sua chave da API da Anthropic (começa com sk-ant-)."
+  echo "Para ligar o Professor IA, cole sua chave da API da OpenAI (começa com sk-)"
+  echo "ou da Anthropic (começa com sk-ant-). Os caracteres não aparecem enquanto você cola."
   echo "Ela fica salva só neste Mac, no arquivo .env desta pasta. Enter em branco pula esta etapa."
   read -r -s -p "Chave: " KEY
   echo
+  KEY="$(printf '%s' "$KEY" | tr -d '[:space:]')"
   if [ -n "$KEY" ]; then
     umask 077
-    printf 'ANTHROPIC_API_KEY=%s\n' "$KEY" > .env
-    echo "Chave salva."
+    case "$KEY" in
+      sk-ant-*) printf 'ANTHROPIC_API_KEY=%s\n' "$KEY" > .env; echo "Chave da Anthropic salva." ;;
+      *) printf 'OPENAI_API_KEY=%s\nOPENAI_MODEL=gpt-4o-mini\n' "$KEY" > .env; echo "Chave da OpenAI salva (modelo gpt-4o-mini)." ;;
+    esac
   fi
 fi
 

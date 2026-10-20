@@ -3,8 +3,9 @@ PAINEL GM SÃO GONÇALO — VERSÃO LOCAL (roda no seu Mac)
 Abrir o painel
 1. Dois cliques em "Abrir painel.command" (nesta pasta).
    Na primeira vez, o Mac pode avisar que o arquivo veio da internet: clique com o botão direito > Abrir > Abrir.
-2. Na primeira vez ele prepara tudo e pede a chave da API da Anthropic para ligar o Professor IA.
-   Cole a chave (começa com sk-ant-) e aperte Enter. Ela fica salva só neste Mac, no arquivo .env.
+2. Na primeira vez ele prepara tudo e pede a chave da IA para ligar o Professor IA.
+   Cole a chave da OpenAI (começa com sk-) e aperte Enter; os caracteres não aparecem, é normal.
+   Ela fica salva só neste Mac, no arquivo .env. O modelo usado é o gpt-4o-mini.
    Sem chave, o painel funciona normalmente; só o Professor IA fica desligado.
 3. O navegador abre em http://localhost:3000. Deixe a janela do Terminal aberta enquanto estuda.
    Para fechar, feche a janela do Terminal.
@@ -15,22 +16,22 @@ Onde ficam seus dados
 - Toda semana: aba Ajustes > Baixar backup, e guarde o arquivo na pasta do concurso.
 - Para continuar em outro navegador ou computador: aba Ajustes > Importar backup.
 
-Chave da API da Anthropic (para o Professor IA)
-1. https://console.anthropic.com > crie uma conta.
-2. Billing: adicione créditos (US$ 5 já dá) e, em Limits, defina um limite de gasto mensal.
-3. API Keys: crie uma chave e cole no "Abrir painel.command" quando ele pedir.
-   Para trocar a chave depois, apague o arquivo .env desta pasta (ele é oculto: no Finder, Cmd+Shift+. mostra) e abra o painel de novo.
-- Modelo padrão: Claude Opus 5.5. Para gastar metade, adicione no .env a linha  CLAUDE_MODEL=claude-sonnet-5-5
+Chave da IA (para o Professor IA)
+- OpenAI: https://platform.openai.com > API keys. Confira se a conta tem créditos (Billing).
+- Também aceita chave da Anthropic (começa com sk-ant-); o painel reconhece sozinho.
+- Para trocar a chave, apague o arquivo .env desta pasta (ele é oculto: no Finder, Cmd+Shift+. mostra)
+  e abra o painel de novo.
+- Para trocar o modelo da OpenAI, edite a linha OPENAI_MODEL=gpt-4o-mini no .env.
 
 Opcional: publicar na internet (para usar no celular)
 - O código está em https://github.com/jardim-nf/agente-ia-concurso-sao-goncalo
 - Na Vercel (vercel.com, entrar com GitHub): Add New > Project > importar o repositório e cadastrar
-  ANTHROPIC_API_KEY e APP_PASSWORD (uma senha sua). No celular, coloque essa senha na aba Ajustes.
+  OPENAI_API_KEY e APP_PASSWORD (uma senha sua). No celular, coloque essa senha na aba Ajustes.
 - Os dados continuam salvos em cada aparelho separadamente; use o backup para levar de um para o outro.
 
 Arquivos desta pasta
 - Abrir painel.command   abre o painel (dois cliques)
 - server.js              servidor local que mostra o painel e liga a IA
 - public/                o painel (página, ícones, leis)
-- api/claude.js          conversa com a API do Claude usando a sua chave
+- api/ia.js              conversa com a IA (OpenAI ou Claude) usando a sua chave
 - .env                   sua chave (criado na primeira vez; nunca vai para o GitHub)

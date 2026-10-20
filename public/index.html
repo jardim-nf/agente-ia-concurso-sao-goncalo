@@ -463,7 +463,7 @@ input[type="password"] { width: 100%; min-width: 0; border: 1px solid var(--line
           <button type="button" data-ia="chat" aria-pressed="false">Tirar dúvida</button>
           <button type="button" data-ia="analise" aria-pressed="false">Analisar meu desempenho</button>
         </div>
-        <span class="small muted">Cada pedido à IA é cobrado na sua conta da API da Anthropic.</span>
+        <span class="small muted">Cada pedido à IA é cobrado na sua conta da API (OpenAI ou Anthropic).</span>
       </div>
       <div class="notice" id="ia-off" hidden>O Professor IA não está disponível agora. Abra o painel pelo arquivo "Abrir painel.command".</div>
 
@@ -1416,7 +1416,8 @@ async function renderReader() {
 function iaErr(e) {
   const c = e && e.code;
   if (['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed'].includes(c)) { $('#ia-off').hidden = false; $('#ia-off').textContent = 'A IA pediu a senha. Coloque a senha certa na aba Ajustes.'; return ''; }
-  if (c === 'server_config') return 'O Professor IA está desligado: falta a chave da API. Feche o painel e abra de novo pelo "Abrir painel.command" para colar a chave.';
+  if (c === 'server_config') return 'O Professor IA não conseguiu usar a chave da API (falta a chave, ela está errada ou o modelo não existe). Feche o painel, apague o arquivo .env da pasta e abra de novo pelo "Abrir painel.command" para colar a chave.';
+  if (c === 'no_credit') return 'Sua conta da API está sem créditos. Adicione créditos no site da OpenAI ou da Anthropic e tente de novo.';
   if (c === 'cancelled') return 'Parado.';
   if (c === 'rate_limited') return 'Muitos pedidos seguidos ou limite de uso atingido. Espere um pouco e tente de novo.';
   if (c === 'session_expired') return 'Recarregue a página e tente de novo.';

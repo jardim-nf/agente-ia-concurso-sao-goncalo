@@ -13,7 +13,7 @@ Dois cliques em `Abrir painel.command`, ou:
 
 ```bash
 npm install
-npm start          # lê a chave do arquivo .env (veja .env.example)
+npm start          # lê a chave da IA do arquivo .env (veja .env.example)
 ```
 
 O painel abre em http://localhost:3000. O progresso fica salvo no navegador (localStorage), com backup e importação na aba **Ajustes**.
@@ -23,15 +23,18 @@ O painel abre em http://localhost:3000. O progresso fica salvo no navegador (loc
 | Parte | O que faz |
 |---|---|
 | `public/` | O painel (HTML único, ícones, leis, service worker) |
-| `server.js` | Servidor local: entrega `public/` e encaminha `/api/claude` |
-| `api/claude.js` | Chama a API do Claude com a chave guardada no servidor; também funciona como função da Vercel |
+| `server.js` | Servidor local: entrega `public/` e encaminha `/api/ia` |
+| `api/ia.js` | Chama a IA (OpenAI ou Claude) com a chave guardada no servidor; também funciona como função da Vercel |
 
 ## Variáveis de ambiente
 
 | Nome | Valor |
 |---|---|
-| `ANTHROPIC_API_KEY` | chave da API da Anthropic |
+| `OPENAI_API_KEY` | chave da API da OpenAI |
+| `OPENAI_MODEL` | opcional; padrão `gpt-4o-mini` |
+| `ANTHROPIC_API_KEY` | alternativa: chave da API da Anthropic |
 | `CLAUDE_MODEL` | opcional; padrão `claude-opus-5-5` |
+| `AI_PROVIDER` | `openai` ou `claude`, quando houver as duas chaves |
 | `APP_PASSWORD` | obrigatória só na Vercel: senha que o navegador envia para usar a IA |
 
 As leis em `public/leis/` são textos oficiais (Planalto e Diário Oficial de São Gonçalo), com a fonte na primeira linha de cada arquivo.
