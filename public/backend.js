@@ -1,36 +1,34 @@
-// Liga o painel ao Supabase (login + dados sincronizados) e à função /api/claude (Professor IA).
+// Guarda o progresso no próprio navegador (localStorage) e liga o Professor IA à rota /api/claude.
 // Expõe window.AppBackend.use("db" | "sample"), no mesmo formato que o painel já usava no claude.ai.
 (function () {
-  const cfg = window.APP_CONFIG || {};
-  const configured = Boolean(cfg.supabaseUrl && cfg.supabaseAnonKey);
+  const STORE = "gmsg:docs";
+  const PASS = "gmsg:senha-ia";
+  const APP = "painel-gm-sao-goncalo";
   const $ = (s) => document.querySelector(s);
-
-  let resolveReady;
-  const ready = new Promise((r) => { resolveReady = r; });
-  window.AppBackend = { use: (name) => ready.then((api) => (api ? api[name] || null : null)) };
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
   }
 
-  if (!configured || !window.supabase) {
-    showAuth("O site ainda não foi configurado: faltam as variáveis SUPABASE_URL e SUPABASE_ANON_KEY na Vercel.");
-    resolveReady(null);
-    return;
+  /* ---------- Banco local: um mapa "colecao/id" -> documento ---------- */
+  let storageOk = true;
+  try { localStorage.setItem("gmsg:teste", "1"); localStorage.removeItem("gmsg:teste"); } catch { storageOk = false; }
+
+  function readStore() {
+    try { const raw = localStorage.getItem(STORE); return new Map(Object.entries(raw ? JSON.parse(raw) : {})); }
+    catch { return new Map(); }
+  }
+  function writeStore() {
+    try { localStorage.setItem(STORE, JSON.stringify(Object.fromEntries(cache))); }
+    catch { throw { code: "quota_exceeded", message: "O navegador não tem mais espaço para salvar. Baixe um backup e apague registros antigos." }; }
+    info();
   }
 
-  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
-    auth: { persistSession: true, autoRefreshToken: true },
-  });
-
-  /* ---------- Banco: um documento por linha da tabela docs (col + id) ---------- */
-  let uid = null;
-  const cache = new Map(); // "col/id" -> data
+  const cache = readStore();
   const docListeners = new Map();
   const colListeners = new Map();
   const key = (c, i) => c + "/" + i;
   const split = (path) => { const j = path.indexOf("/"); return [path.slice(0, j), path.slice(j + 1)]; };
-  const toErr = (e) => ({ code: e && e.code === "42501" ? "invalid_argument" : "unavailable", message: (e && e.message) || "" });
 
   function snapDoc(c, i) {
     const d = cache.get(key(c, i));
@@ -54,20 +52,10 @@
     return () => map.get(k).delete(fn);
   }
 
-  async function fetchAll() {
-    const rows = [];
-    for (let from = 0; ; from += 1000) {
-      const { data, error } = await sb.from("docs").select("col,id,data").eq("user_id", uid).range(from, from + 999);
-      if (error) throw toErr(error);
-      rows.push(...data);
-      if (data.length < 1000) break;
-    }
-    return rows;
-  }
-  async function refreshAll() {
-    let rows;
-    try { rows = await fetchAll(); } catch { return; }
-    const next = new Map(rows.map((r) => [key(r.col, r.id), r.data]));
+  // Outra aba do painel salvou algo: atualiza esta também.
+  window.addEventListener("storage", (e) => {
+    if (e.key !== STORE) return;
+    const next = readStore();
     const changed = new Set();
     for (const [k, d] of next) if (JSON.stringify(cache.get(k)) !== JSON.stringify(d)) changed.add(k);
     for (const k of cache.keys()) if (!next.has(k)) changed.add(k);
@@ -76,30 +64,20 @@
       const [c, i] = split(k);
       emit(c, i);
     }
-  }
+  });
 
   function docRef(c, i) {
     return {
       id: i,
       path: key(c, i),
       get: async () => snapDoc(c, i),
-      set: async (data) => {
-        cache.set(key(c, i), data);
-        emit(c, i);
-        const { error } = await sb.from("docs").upsert({ user_id: uid, col: c, id: i, data, updated_at: new Date().toISOString() });
-        if (error) throw toErr(error);
-      },
+      set: async (data) => { cache.set(key(c, i), data); writeStore(); emit(c, i); },
       update: async (patch) => {
         const cur = cache.get(key(c, i));
         if (cur === undefined) throw { code: "invalid_argument", message: "documento não existe" };
-        return docRef(c, i).set({ ...cur, ...patch });
+        cache.set(key(c, i), { ...cur, ...patch }); writeStore(); emit(c, i);
       },
-      delete: async () => {
-        cache.delete(key(c, i));
-        emit(c, i);
-        const { error } = await sb.from("docs").delete().match({ user_id: uid, col: c, id: i });
-        if (error) throw toErr(error);
-      },
+      delete: async () => { cache.delete(key(c, i)); writeStore(); emit(c, i); },
       onSnapshot: (next) => {
         const off = listen(docListeners, key(c, i), next);
         queueMicrotask(() => next(snapDoc(c, i)));
@@ -132,16 +110,15 @@
     if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch { /* segue */ } }
     return undefined;
   }
+  function savedPassword() { try { return localStorage.getItem(PASS) || ""; } catch { return ""; } }
+
   async function sample(input, opts = {}) {
     const messages = typeof input === "string" ? [{ role: "user", content: input }] : input;
-    const { data } = await sb.auth.getSession();
-    const token = data.session && data.session.access_token;
-    if (!token) throw { code: "session_expired", message: "sem sessão" };
     let res;
     try {
       res = await fetch("/api/claude", {
         method: "POST",
-        headers: { "content-type": "application/json", authorization: "Bearer " + token },
+        headers: { "content-type": "application/json", "x-app-password": savedPassword() },
         body: JSON.stringify({ messages, tier: opts.modelTier || "default" }),
         signal: opts.signal,
       });
@@ -152,8 +129,8 @@
     if (!res.ok) {
       let j = {};
       try { j = await res.json(); } catch { /* sem corpo */ }
-      const byStatus = { 401: "session_expired", 403: "not_granted", 413: "prompt_too_large", 429: "rate_limited" };
-      throw { code: j.error === "not_allowed" ? "not_granted" : j.error || byStatus[res.status] || "upstream_error", message: j.message || res.statusText };
+      const byStatus = { 401: "not_granted", 403: "not_granted", 404: "server_config", 413: "prompt_too_large", 429: "rate_limited" };
+      throw { code: j.error === "bad_password" ? "not_granted" : j.error || byStatus[res.status] || "upstream_error", message: j.message || res.statusText };
     }
     const reader = res.body.getReader();
     const dec = new TextDecoder();
@@ -192,67 +169,68 @@
     return v;
   };
 
-  /* ---------- Login ---------- */
-  function showAuth(msg) {
-    if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", () => showAuth(msg)); return; }
-    const box = $("#auth");
-    if (!box) return;
-    box.hidden = false;
-    if (msg) { $("#auth-msg").textContent = msg; $("#auth-msg").className = "form-msg bad"; }
+  window.AppBackend = { use: (name) => Promise.resolve(name === "db" ? (storageOk ? db : null) : name === "sample" ? sample : null) };
+
+  /* ---------- Aba Ajustes: backup e senha da IA ---------- */
+  function info() {
+    const el = $("#aj-info");
+    if (!el) return;
+    const kb = Math.ceil(JSON.stringify(Object.fromEntries(cache)).length / 1024);
+    el.textContent = `${cache.size} registros · ${kb} KB`;
   }
-  async function start(session) {
-    uid = session.user.id;
-    $("#auth").hidden = true;
-    $("#logout").hidden = false;
-    try {
-      const rows = await fetchAll();
-      for (const r of rows) cache.set(key(r.col, r.id), r.data);
-    } catch (e) {
-      const n = $("#db-notice");
-      if (n) { n.textContent = "Não foi possível carregar seus dados. Confira a conexão e recarregue."; n.hidden = false; }
-    }
-    sb.channel("docs-" + uid)
-      .on("postgres_changes", { event: "*", schema: "public", table: "docs", filter: "user_id=eq." + uid }, (p) => {
-        if (p.eventType === "DELETE") {
-          const o = p.old || {};
-          if (o.col && (!o.user_id || o.user_id === uid) && cache.has(key(o.col, o.id))) { cache.delete(key(o.col, o.id)); emit(o.col, o.id); }
-        } else if (p.new && p.new.col) {
-          const k = key(p.new.col, p.new.id);
-          if (JSON.stringify(cache.get(k)) !== JSON.stringify(p.new.data)) { cache.set(k, p.new.data); emit(p.new.col, p.new.id); }
-        }
-      })
-      .subscribe();
-    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refreshAll(); });
-    resolveReady({ db, sample });
+  function exportBackup() {
+    const data = { app: APP, versao: 1, exportado: new Date().toISOString(), docs: Object.fromEntries(cache) };
+    const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `backup-painel-gm-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.append(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    const msg = $("#aj-msg");
+    msg.className = "form-msg ok";
+    msg.textContent = "Backup baixado. Guarde o arquivo na pasta do concurso.";
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    const form = $("#f-auth"), msg = $("#auth-msg");
-    const go = async (mode) => {
-      const email = $("#auth-email").value.trim(), password = $("#auth-pass").value;
-      if (!email || password.length < 6) { msg.className = "form-msg bad"; msg.textContent = "Informe o e-mail e uma senha com pelo menos 6 caracteres."; return; }
-      msg.className = "form-msg"; msg.textContent = mode === "up" ? "Criando a conta…" : "Entrando…";
-      const r = mode === "up" ? await sb.auth.signUp({ email, password }) : await sb.auth.signInWithPassword({ email, password });
-      if (r.error) {
-        msg.className = "form-msg bad";
-        msg.textContent = /invalid login/i.test(r.error.message) ? "E-mail ou senha incorretos."
-          : /not allowed|disabled/i.test(r.error.message) ? "Novos cadastros estão desativados neste site."
-          : "Não deu certo: " + r.error.message;
-        return;
-      }
-      if (mode === "up" && !r.data.session) { msg.className = "form-msg ok"; msg.textContent = "Conta criada. Confirme pelo link que chegou no seu e-mail e depois entre."; return; }
-    };
-    form.addEventListener("submit", (ev) => { ev.preventDefault(); go("in"); });
-    $("#auth-signup").addEventListener("click", () => go("up"));
-    $("#logout").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
-  });
+    if (!$("#aj-export")) return;
+    info();
+    $("#aj-export").addEventListener("click", exportBackup);
 
-  let started = false;
-  sb.auth.onAuthStateChange((_event, session) => {
-    if (session && !started) { started = true; start(session); }
+    let pending = null;
+    $("#aj-import").addEventListener("change", async (ev) => {
+      const msg = $("#aj-msg"), file = ev.target.files && ev.target.files[0];
+      ev.target.value = "";
+      $("#aj-confirm").hidden = true;
+      if (!file) return;
+      try {
+        const data = JSON.parse(await file.text());
+        if (data.app !== APP || !data.docs || typeof data.docs !== "object") throw new Error("formato");
+        pending = data.docs;
+        msg.className = "form-msg";
+        msg.textContent = `Backup de ${new Date(data.exportado).toLocaleDateString("pt-BR")} com ${Object.keys(data.docs).length} registros. Ele substitui tudo o que está salvo neste navegador.`;
+        $("#aj-confirm").hidden = false;
+      } catch {
+        pending = null;
+        msg.className = "form-msg bad";
+        msg.textContent = "Esse arquivo não é um backup do painel.";
+      }
+    });
+    $("#aj-confirm").addEventListener("click", () => {
+      if (!pending) return;
+      cache.clear();
+      for (const [k, v] of Object.entries(pending)) cache.set(k, v);
+      try { writeStore(); } catch (e) { $("#aj-msg").className = "form-msg bad"; $("#aj-msg").textContent = e.message; return; }
+      location.reload();
+    });
+
+    const pass = $("#aj-senha");
+    pass.value = savedPassword();
+    $("#aj-salvar").addEventListener("click", () => {
+      try { localStorage.setItem(PASS, pass.value); } catch { /* sem armazenamento */ }
+      $("#aj-senha-msg").className = "form-msg ok";
+      $("#aj-senha-msg").textContent = pass.value ? "Senha salva neste navegador." : "Senha apagada.";
+    });
   });
-  sb.auth.getSession().then(({ data }) => {
-    if (data.session) { if (!started) { started = true; start(data.session); } }
-    else showAuth();
-  });
+  window.addEventListener("storage", info);
 })();

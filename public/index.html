@@ -342,25 +342,10 @@ details.week.current { border-color: var(--gold-line); }
 body { margin: 0; }
 [hidden] { display: none !important; }
 img { max-width: 100%; }
-input[type="email"], input[type="password"] { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 8px 10px; }
-.auth { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: grid; place-items: center; overflow-y: auto; padding-block: 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-.auth-card { width: 100%; max-width: 420px; }
-.auth-title { font-size: 2.2rem; line-height: 1; color: var(--navy); text-transform: uppercase; }
+input[type="password"] { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 8px 10px; }
 </style>
 </head>
 <body>
-<div id="auth" class="auth" hidden>
-  <form class="card auth-card" id="f-auth" autocomplete="on">
-    <span class="label">Guarda Municipal de São Gonçalo · Selecon</span>
-    <h1 class="auth-title">Painel de estudos</h1>
-    <p class="small muted">Entre com seu e-mail e senha. Seu progresso fica salvo na sua conta e aparece igual no celular e no computador.</p>
-    <div class="field"><label for="auth-email">E-mail</label><input id="auth-email" type="email" autocomplete="email" required></div>
-    <div class="field"><label for="auth-pass">Senha</label><input id="auth-pass" type="password" autocomplete="current-password" minlength="6" required></div>
-    <div style="display: flex; gap: 10px; flex-wrap: wrap;"><button class="btn" type="submit">Entrar</button><button class="btn ghost" type="button" id="auth-signup">Criar conta</button></div>
-    <p class="form-msg" id="auth-msg"></p>
-  </form>
-</div>
-
 
 <header class="top gutter">
   <div class="inner">
@@ -369,7 +354,6 @@ input[type="email"], input[type="password"] { width: 100%; min-width: 0; border:
       <h1>Painel de estudos</h1>
     </div>
     <div class="hdr-right">
-      <button class="btn ghost sm" id="logout" type="button" hidden>Sair</button>
       <button class="chip gold" id="hdr-timer" type="button" data-action="go" data-tab="cronometro" hidden></button>
       <div class="count"><b id="hdr-days">97</b><span>dias até a prova<br>domingo, 24/01/2027</span></div>
     </div>
@@ -390,12 +374,13 @@ input[type="email"], input[type="password"] { width: 100%; min-width: 0; border:
     <button class="tab" role="tab" data-tab="taf" aria-selected="false">TAF</button>
     <button class="tab" role="tab" data-tab="erros" aria-selected="false">Caderno de erros</button>
     <button class="tab" role="tab" data-tab="cronograma" aria-selected="false">Cronograma</button>
+    <button class="tab" role="tab" data-tab="ajustes" aria-selected="false">Ajustes</button>
   </nav>
 </div>
 
 <main class="gutter">
   <div class="inner" style="display: grid; gap: 16px;">
-    <div class="notice" id="db-notice" hidden>Entre na sua conta para salvar o progresso.</div>
+    <div class="notice" id="db-notice" hidden>Este navegador não está deixando salvar dados (janela anônima?). O que você marcar some ao fechar.</div>
 
     <!-- HOJE -->
     <section class="view" id="v-hoje">
@@ -480,7 +465,7 @@ input[type="email"], input[type="password"] { width: 100%; min-width: 0; border:
         </div>
         <span class="small muted">Cada pedido à IA é cobrado na sua conta da API da Anthropic.</span>
       </div>
-      <div class="notice" id="ia-off" hidden>O Professor IA não está disponível agora. Confira a internet e se você entrou na sua conta.</div>
+      <div class="notice" id="ia-off" hidden>O Professor IA não está disponível agora. Abra o painel pelo arquivo "Abrir painel.command".</div>
 
       <div class="ia-panel" id="ia-quiz">
         <form class="card" id="f-quiz" autocomplete="off">
@@ -659,6 +644,30 @@ input[type="email"], input[type="password"] { width: 100%; min-width: 0; border:
       <div id="err-list" class="quiz"></div>
     </section>
 
+    <!-- AJUSTES -->
+    <section class="view" id="v-ajustes" hidden>
+      <article class="card">
+        <div class="card-head"><h2>Seus dados</h2><span class="small muted" id="aj-info"></span></div>
+        <p class="small muted">Tudo o que você registra fica salvo neste navegador, neste computador. Baixe um backup toda semana e guarde na pasta do concurso. Para continuar em outro navegador ou aparelho, importe o backup lá.</p>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn" type="button" id="aj-export">Baixar backup</button>
+          <label class="btn ghost" for="aj-import">Importar backup</label>
+          <input id="aj-import" type="file" accept="application/json,.json" hidden>
+          <button class="btn danger" type="button" id="aj-confirm" hidden>Substituir os dados deste navegador</button>
+        </div>
+        <p class="form-msg" id="aj-msg"></p>
+      </article>
+      <article class="card">
+        <div class="card-head"><h2>Senha do Professor IA</h2></div>
+        <p class="small muted">Rodando no seu Mac, não precisa de senha. Só se você publicar o painel na internet (Vercel), a IA pede a senha definida em APP_PASSWORD.</p>
+        <div class="fields">
+          <div class="field"><label for="aj-senha">Senha</label><input id="aj-senha" type="password" autocomplete="off"></div>
+          <button class="btn ghost" type="button" id="aj-salvar">Salvar</button>
+        </div>
+        <p class="form-msg" id="aj-senha-msg"></p>
+      </article>
+    </section>
+
     <!-- CRONOGRAMA -->
     <section class="view" id="v-cronograma" hidden>
       <p class="small muted">Plano original, semana a semana. Na aba Hoje, a meta do dia se ajusta ao que você já concluiu.</p>
@@ -667,8 +676,6 @@ input[type="email"], input[type="password"] { width: 100%; min-width: 0; border:
   </div>
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="/api/config"></script>
 <script src="/backend.js"></script>
 <script>
 /* ---------- Dados fixos do edital e do curso ---------- */
@@ -1408,11 +1415,11 @@ async function renderReader() {
 /* ---------- Professor IA ---------- */
 function iaErr(e) {
   const c = e && e.code;
-  if (['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed'].includes(c)) { $('#ia-off').hidden = false; $('#ia-off').textContent = 'Esta conta não tem acesso à IA. Na Vercel, confira a variável ALLOWED_EMAILS.'; return ''; }
-  if (c === 'server_config') return 'A IA não está configurada no servidor: confira a chave ANTHROPIC_API_KEY na Vercel.';
+  if (['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed'].includes(c)) { $('#ia-off').hidden = false; $('#ia-off').textContent = 'A IA pediu a senha. Coloque a senha certa na aba Ajustes.'; return ''; }
+  if (c === 'server_config') return 'O Professor IA está desligado: falta a chave da API. Feche o painel e abra de novo pelo "Abrir painel.command" para colar a chave.';
   if (c === 'cancelled') return 'Parado.';
   if (c === 'rate_limited') return 'Muitos pedidos seguidos ou limite de uso atingido. Espere um pouco e tente de novo.';
-  if (c === 'session_expired') return 'Sua sessão expirou. Recarregue a página e entre de novo.';
+  if (c === 'session_expired') return 'Recarregue a página e tente de novo.';
   if (c === 'refused') return 'A IA não respondeu a esse pedido. Mude o assunto e tente de novo.';
   if (c === 'invalid_json') return 'A resposta veio num formato inesperado. Tente gerar de novo.';
   if (c === 'empty_completion') return 'A IA não gerou resposta. Tente pedir menos questões.';
@@ -1947,7 +1954,7 @@ function armConfirm(t) {
 }
 
 /* ---------- Navegação ---------- */
-const VIEWS = ['hoje', 'aulas', 'revisoes', 'questoes', 'professor', 'flashcards', 'cronometro', 'simulados', 'leis', 'taf', 'erros', 'cronograma'];
+const VIEWS = ['hoje', 'aulas', 'revisoes', 'questoes', 'professor', 'flashcards', 'cronometro', 'simulados', 'leis', 'taf', 'erros', 'cronograma', 'ajustes'];
 function go(v) {
   if (!VIEWS.includes(v)) v = 'hoje';
   for (const x of VIEWS) $('#v-' + x).hidden = x !== v;

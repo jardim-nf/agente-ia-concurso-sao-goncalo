@@ -7,24 +7,31 @@ Painel de estudos para o concurso da Guarda Municipal de São Gonçalo (RJ), edi
 - **Questões, simulados, lei seca e TAF**, com gráficos de evolução.
 - **Professor IA**: gera questões no estilo Selecon a partir do texto oficial das leis, tira dúvidas e analisa seu desempenho.
 
+## Como rodar no Mac
+
+Dois cliques em `Abrir painel.command`, ou:
+
+```bash
+npm install
+npm start          # lê a chave do arquivo .env (veja .env.example)
+```
+
+O painel abre em http://localhost:3000. O progresso fica salvo no navegador (localStorage), com backup e importação na aba **Ajustes**.
+
 ## Como funciona
 
-| Parte | Onde roda |
+| Parte | O que faz |
 |---|---|
-| Site (`public/`) | Vercel, como app instalável (PWA) |
-| Login e progresso | Supabase (tabela `docs`, criada por `supabase.sql`) |
-| Professor IA (`api/claude.js`) | Função da Vercel que chama a API do Claude com a chave guardada no servidor |
+| `public/` | O painel (HTML único, ícones, leis, service worker) |
+| `server.js` | Servidor local: entrega `public/` e encaminha `/api/claude` |
+| `api/claude.js` | Chama a API do Claude com a chave guardada no servidor; também funciona como função da Vercel |
 
-## Variáveis de ambiente na Vercel
+## Variáveis de ambiente
 
 | Nome | Valor |
 |---|---|
 | `ANTHROPIC_API_KEY` | chave da API da Anthropic |
-| `SUPABASE_URL` | Project URL do Supabase |
-| `SUPABASE_ANON_KEY` | chave anon do Supabase |
-| `ALLOWED_EMAILS` | e-mails que podem usar a IA, separados por vírgula |
 | `CLAUDE_MODEL` | opcional; padrão `claude-opus-5-5` |
-
-O passo a passo completo está em `COMO PUBLICAR.txt`.
+| `APP_PASSWORD` | obrigatória só na Vercel: senha que o navegador envia para usar a IA |
 
 As leis em `public/leis/` são textos oficiais (Planalto e Diário Oficial de São Gonçalo), com a fonte na primeira linha de cada arquivo.

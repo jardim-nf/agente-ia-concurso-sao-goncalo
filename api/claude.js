@@ -1,9 +1,9 @@
-// Função da Vercel que faz a ponte entre o painel e a API do Claude.
-// A chave da API fica só aqui no servidor (variável ANTHROPIC_API_KEY);
-// o navegador manda o token de login do Supabase e recebe o texto em streaming.
+// Ponte entre o painel e a API do Claude, usada pelo server.js (no Mac) e pela Vercel (site publicado).
+// A chave da API fica só no servidor (variável ANTHROPIC_API_KEY); o navegador recebe o texto em streaming.
 import Anthropic from "@anthropic-ai/sdk";
+import { createHash, timingSafeEqual } from "node:crypto";
 
-const client = new Anthropic(); // lê ANTHROPIC_API_KEY do ambiente da Vercel
+let client; // criado no primeiro pedido, depois que as variáveis de ambiente já foram lidas
 
 const MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
 const EFFORT = { quick: "low", default: "medium", complex: "high" };
@@ -15,23 +15,16 @@ const json = (status, body) =>
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
   });
 
-// Confere o login no Supabase e, se ALLOWED_EMAILS estiver definido, se o e-mail está na lista.
-async function checkUser(request) {
-  const token = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
-  if (!token) return { status: 401, error: "session_expired" };
-  const res = await fetch(`${process.env.SUPABASE_URL}/auth/v1/user`, {
-    headers: { Authorization: `Bearer ${token}`, apikey: process.env.SUPABASE_ANON_KEY },
-  });
-  if (!res.ok) return { status: 401, error: "session_expired" };
-  const user = await res.json();
-  const allowed = (process.env.ALLOWED_EMAILS || "")
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-  if (allowed.length && !allowed.includes(String(user.email || "").toLowerCase())) {
-    return { status: 403, error: "not_allowed" };
+// No Mac (server.js) a IA fica aberta só para o próprio computador.
+// Publicado na Vercel, exige a senha APP_PASSWORD, para ninguém mais gastar a sua chave.
+function checkPassword(request) {
+  const expected = process.env.APP_PASSWORD || "";
+  if (!expected) {
+    return process.env.VERCEL ? { status: 500, error: "server_config", message: "Defina APP_PASSWORD nas variáveis da Vercel." } : null;
   }
-  return { user };
+  const given = request.headers.get("x-app-password") || "";
+  const digest = (s) => createHash("sha256").update(s).digest();
+  return timingSafeEqual(digest(given), digest(expected)) ? null : { status: 401, error: "bad_password" };
 }
 
 // Junta turnos seguidos do mesmo papel e garante que a conversa começa e termina no usuário.
@@ -60,11 +53,12 @@ function errorCode(err) {
 }
 
 export async function POST(request) {
-  if (!process.env.ANTHROPIC_API_KEY || !process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-    return json(500, { error: "server_config", message: "Faltam variáveis de ambiente na Vercel." });
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return json(500, { error: "server_config", message: "Falta a chave ANTHROPIC_API_KEY." });
   }
-  const auth = await checkUser(request);
-  if (auth.error) return json(auth.status, { error: auth.error });
+  const denied = checkPassword(request);
+  if (denied) return json(denied.status, { error: denied.error, message: denied.message });
+  client ??= new Anthropic(); // lê ANTHROPIC_API_KEY do ambiente
 
   const raw = await request.text();
   if (raw.length > MAX_BODY_BYTES) return json(413, { error: "prompt_too_large" });

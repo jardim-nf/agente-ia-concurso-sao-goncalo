@@ -4,7 +4,10 @@
   "type": "module",
   "description": "Painel de estudos para o concurso da Guarda Municipal de São Gonçalo, com Professor IA",
   "engines": {
-    "node": ">=20"
+    "node": ">=20.6"
+  },
+  "scripts": {
+    "start": "node --env-file=.env server.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.135.0"

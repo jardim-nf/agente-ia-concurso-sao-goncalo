@@ -1,6 +1,6 @@
 // Guarda uma cópia do painel e das leis para abrir mesmo com internet ruim.
 // Sempre tenta a rede primeiro, então as atualizações do site chegam na hora.
-const CACHE = "painel-gm-sg-v2";
+const CACHE = "painel-gm-sg-v3";
 const ASSETS = [
   "/",
   "/index.html",
