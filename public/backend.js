@@ -2,7 +2,7 @@
 // Expõe window.AppBackend.use("db" | "sample"), no mesmo formato que o painel já usava no claude.ai.
 (function () {
   const cfg = window.APP_CONFIG || {};
-  const configured = cfg.supabaseUrl && cfg.supabaseAnonKey && !/COLE_AQUI/.test(cfg.supabaseUrl + cfg.supabaseAnonKey);
+  const configured = Boolean(cfg.supabaseUrl && cfg.supabaseAnonKey);
   const $ = (s) => document.querySelector(s);
 
   let resolveReady;
@@ -14,7 +14,7 @@
   }
 
   if (!configured || !window.supabase) {
-    showAuth("O site ainda não foi configurado: falta preencher o config.js com os dados do Supabase.");
+    showAuth("O site ainda não foi configurado: faltam as variáveis SUPABASE_URL e SUPABASE_ANON_KEY na Vercel.");
     resolveReady(null);
     return;
   }

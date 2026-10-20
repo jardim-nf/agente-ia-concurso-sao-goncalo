@@ -1,38 +1,38 @@
 PAINEL GM SÃO GONÇALO — VERSÃO INDEPENDENTE (site próprio)
 
 Como funciona
-- O site fica hospedado na Vercel (grátis).
+- O código fica no GitHub: https://github.com/jardim-nf/agente-ia-concurso-sao-goncalo
+- O site fica hospedado na Vercel (grátis) e se atualiza sozinho a cada envio para o GitHub.
 - Seu progresso fica num banco de dados no Supabase (grátis), sincronizado entre celular e computador.
 - O Professor IA usa a API da Anthropic com a SUA chave (cobrança por uso, separada da assinatura do Claude).
-  A chave fica só no servidor da Vercel, nunca no navegador.
+  A chave fica só no servidor da Vercel, nunca no navegador nem no GitHub.
 
 PASSO 1 — Supabase (banco de dados e login)
-1. Entre em https://supabase.com e crie uma conta.
+1. Entre em https://supabase.com com "Continue with GitHub".
 2. New project: nome "painel-gm", crie uma senha do banco (guarde), região "South America (São Paulo)".
 3. Quando o projeto terminar de criar: SQL Editor > New query > cole o conteúdo do arquivo supabase.sql > Run.
 4. Authentication > Sign In / Providers > Email: desligue "Confirm email".
-5. Project Settings > API: copie a "Project URL" e a chave "anon" (public). Essas duas podem ser compartilhadas.
+5. Project Settings > API: anote a "Project URL" e a chave "anon" (public). Elas vão no passo 3.
 
 PASSO 2 — Anthropic (chave da IA)
 1. Entre em https://console.anthropic.com e crie uma conta.
 2. Billing: adicione créditos (por exemplo, US$ 5) e, em Limits, defina um limite de gasto mensal.
-3. API Keys: crie uma chave. NÃO cole a chave em conversa nenhuma; ela vai direto na Vercel (passo 4).
+3. API Keys: crie uma chave. NÃO cole a chave em conversa nenhuma; ela vai direto na Vercel.
 
 PASSO 3 — Vercel (hospedagem)
-1. Entre em https://vercel.com e crie uma conta grátis (plano Hobby).
-2. No Claude Code, digite:  ! npx vercel login
-3. O Claude publica o site com: npx vercel deploy --prod
+1. Entre em https://vercel.com com "Continue with GitHub" (plano Hobby, grátis).
+2. Add New... > Project > Import no repositório "agente-ia-concurso-sao-goncalo".
+3. Antes de clicar em Deploy, abra "Environment Variables" e cadastre:
+   - ANTHROPIC_API_KEY = a chave criada no passo 2
+   - SUPABASE_URL      = a Project URL do Supabase
+   - SUPABASE_ANON_KEY = a chave anon do Supabase
+   - ALLOWED_EMAILS    = o seu e-mail (só ele pode usar a IA)
+   - CLAUDE_MODEL      = opcional. Padrão: claude-opus-5-5. Para gastar menos: claude-sonnet-5-5 (metade do preço).
+4. Clique em Deploy. No fim aparece o endereço do site (algo como agente-ia-concurso-sao-goncalo.vercel.app).
+   Se mudar alguma variável depois, vá em Deployments > ... > Redeploy.
 
-PASSO 4 — Variáveis na Vercel (Project > Settings > Environment Variables)
-- ANTHROPIC_API_KEY = a chave criada no passo 2
-- SUPABASE_URL      = a Project URL do Supabase
-- SUPABASE_ANON_KEY = a chave anon do Supabase
-- ALLOWED_EMAILS    = o seu e-mail (só ele pode usar a IA)
-- CLAUDE_MODEL      = opcional. Padrão: claude-opus-5-5. Para gastar menos: claude-sonnet-5-5 (metade do preço).
-Depois de salvar as variáveis, publique de novo (Deployments > Redeploy, ou peça ao Claude).
-
-PASSO 5 — Primeiro acesso
-1. Abra o endereço do site, clique em "Criar conta" com seu e-mail e senha.
+PASSO 4 — Primeiro acesso
+1. Abra o endereço do site e clique em "Criar conta" com seu e-mail e senha.
 2. No Supabase: Authentication > Sign In / Providers > desligue "Allow new users to sign up".
    Assim ninguém mais consegue criar conta no seu site.
 3. No celular: abra o site no navegador e use "Adicionar à tela de início" para ele virar um app.
@@ -40,5 +40,6 @@ PASSO 5 — Primeiro acesso
 Arquivos desta pasta
 - public/          o site (página, ícones, leis, service worker)
 - api/claude.js    função do servidor que conversa com a API do Claude
+- api/config.js    entrega ao site a URL e a chave anon do Supabase (lidas das variáveis da Vercel)
 - supabase.sql     cria a tabela do banco
 - vercel.json      configuração da Vercel
